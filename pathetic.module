@@ -1,0 +1,72 @@
+<?php
+// $Id$
+
+function pathetic_filter_tips($delta, $format, $long = FALSE) {
+  return t('Absolute urls are changed to be server relative');
+}
+
+function pathetic_filter($op, $delta = 0, $format = -1, $text = '', $cache_id = 0) {
+  switch ($op) {
+    case 'list':
+      return array(t('Pathetic filter'));
+    case 'description':
+      return t('Convert absolute urls to "server relative" paths');
+    case 'prepare':
+      return $text;
+    case 'process':
+      return _pathetic_process($text);
+    case 'settings':
+      return _pathetic_settings();
+  }
+}
+
+function _pathetic_settings() {
+  $form['pathetic'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Pathetic filter'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['pathetic']["pathetic_domains_to_strip"] = array(
+    '#type' => 'textarea',
+    '#title' => t('Domains to strip'),
+    '#default_value' => variable_get('pathetic_domains_to_strip', ''),
+    '#description' => t('One per line including protocol (e.g. http://www.example.com/ and http://localhost/)'),
+    '#required' => TRUE,
+  );
+  return $form;
+}
+
+function _pathetic_process($text='') {
+  if (!$text) return $text;
+  return preg_replace_callback('/<(?:a|img)\b[^<>]*?\b(?:href|src)\s*=\s*(?:"([^"]+)"|\'([^\']+)\')/', '_pathetic_callback', $text);
+}
+
+function _pathetic_callback($match) {
+  $path = array_pop($match);
+  $relative_path = _pathetic_server_relative_path($path);
+  return str_replace($path, $relative_path, $match[0]);
+}
+
+function _pathetic_server_relative_path($path) {
+  $path = preg_replace(_pathetic_domain_pattern(), '/', $path);
+  return $path;
+}
+
+function _pathetic_domain_pattern() {
+  static $domain_pattern = FALSE;
+  if ($domain_pattern === FALSE) {
+    $domains_to_strip = explode(' ', preg_replace('/\s+/', ' ', variable_get('pathetic_domains_to_strip', '')));
+    $domains          = array_map('_pathetic_prepare_domain', $domains_to_strip);
+    $domain_str       = implode('|', $domains);
+    $domain_pattern   = ",^($domain_str)/|^($domain_str)$,";
+  }
+  return $domain_pattern;
+}
+
+function _pathetic_prepare_domain($domain) {
+  $parts   = parse_url($domain);
+  $domain  = $parts['scheme'] . '://' . $parts['host'];
+  $domain .= $parts['port'] ? ':' . $parts['port'] : '';
+  return str_replace('.', '\.', $domain);
+}

@@ -1,0 +1,14 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Install, update and uninstall functions for the pathetic module.
+ */
+function pathetic_uninstall() {
+  variable_del('pathetic_domains_to_strip');
+}
+
+function pathetic_install() {
+  global $base_url;
+  variable_set('pathetic_domains_to_strip', $base_url);
+}

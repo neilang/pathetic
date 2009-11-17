@@ -1,0 +1,6 @@
+; $Id$
+name = Pathetic
+description = Converts absolute urls into server relative urls
+core = 6.x
+dependencies[] = filter
+package = "Other"
